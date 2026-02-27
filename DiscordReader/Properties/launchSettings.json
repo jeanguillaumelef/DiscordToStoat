@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DiscordReader": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DISCORD_TOKEN": "your-token-here"
+      }
+    }
+  }
+}
