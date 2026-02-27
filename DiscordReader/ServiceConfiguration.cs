@@ -1,3 +1,4 @@
+using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,10 @@ namespace DiscordReader
     {
         private static readonly ServiceProvider _provider = new ServiceCollection()
             .AddSingleton(BuildConfiguration())
-            .AddSingleton<DiscordSocketClient>()
+            .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+            }))
             .AddSingleton<IDiscordRepository, DiscordRepository>()
             .BuildServiceProvider();
 
