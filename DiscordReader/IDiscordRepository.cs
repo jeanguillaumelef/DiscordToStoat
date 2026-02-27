@@ -4,7 +4,7 @@ namespace DiscordReader
 {
     public interface IDiscordRepository
     {
-        Task ConnectAsync(string token);
+        Task ConnectAsync();
         Task<IMessageChannel?> GetChannelAsync(ulong channelId);
         Task<IMessage?> TryGetMessageAsync(ulong channelId, ulong messageId);
     }

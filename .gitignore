@@ -1,4 +1,4 @@
 bin/
 obj/
-**/Properties/launchSettings.Local.json
+appsettings.Local.json
 .claude/

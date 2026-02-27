@@ -1,12 +1,16 @@
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Configuration;
 
 namespace DiscordReader
 {
-    public class DiscordRepository(DiscordSocketClient client) : IDiscordRepository
+    public class DiscordRepository(DiscordSocketClient client, IConfiguration config) : IDiscordRepository
     {
-        public async Task ConnectAsync(string token)
+        public async Task ConnectAsync()
         {
+            var token = config["Discord:Token"]
+                ?? throw new InvalidOperationException("Discord:Token is not configured.");
+
             var ready = new TaskCompletionSource();
             client.Ready += () => { ready.SetResult(); return Task.CompletedTask; };
 
