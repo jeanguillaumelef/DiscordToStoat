@@ -60,16 +60,16 @@ namespace Tests
         }
 
         [Fact]
-        public async Task MigrateToChannelAsync_CreatesChannelAndSendsMessages_WhenChannelDoesNotExist()
+        public async Task MigrateChannelAsync_CreatesChannelAndSendsMessages_WhenChannelDoesNotExistInStoat()
         {
+            _fixture.SetupDiscord([new Message("Author", "Hello", DateTimeOffset.Now, [])]);
+
             _fixture.Stoat.Setup(r => r.GetChannelsAsync(MessageMigratorFixture.StoatServer))
                 .ReturnsAsync([]);
             _fixture.Stoat.Setup(r => r.CreateChannelAsync(MessageMigratorFixture.StoatServer, MessageMigratorFixture.StoatChannelName))
                 .ReturnsAsync(MessageMigratorFixture.StoatChannel);
 
-            _fixture.SetupDiscord([new Message("Author", "Hello", DateTimeOffset.Now, [])]);
-
-            await _fixture.MigrateToChannel();
+            await _fixture.Migrate();
 
             _fixture.Stoat.Verify(r => r.CreateChannelAsync(MessageMigratorFixture.StoatServer, MessageMigratorFixture.StoatChannelName), Times.Once);
             _fixture.Stoat.Verify(r => r.SendMessageAsync(MessageMigratorFixture.StoatChannel, "Author", "Hello"), Times.Once);

@@ -15,8 +15,6 @@ var discordChannel = new DiscordExplorerUI(discordRepo).SelectChannel();
 
 Console.Write("\nStoat server ID: ");
 var serverId = Console.ReadLine()!;
-var stoatChannelId = await new StoatExplorerUI(stoatRepo).SelectChannelAsync(serverId);
-
 Console.WriteLine("\nStarting migration...");
-await new MessageMigrator(discordRepo, stoatRepo).MigrateChannelAsync(discordChannel.Id, stoatChannelId);
+await new MessageMigrator(discordRepo, stoatRepo).MigrateChannelAsync(discordChannel.Id, serverId);
 Console.WriteLine("Migration complete.");

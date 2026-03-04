@@ -46,6 +46,18 @@ namespace StoatWriter
             return new Channel(id, name);
         }
 
+        public async Task<string> CreateChannelAsync(string serverId, string channelName)
+        {
+            var body = JsonSerializer.Serialize(new { type = "Text", name = channelName });
+            var response = await _client.PostAsync(
+                $"/servers/{serverId}/channels",
+                new StringContent(body, Encoding.UTF8, "application/json"));
+            response.EnsureSuccessStatusCode();
+
+            var json = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync());
+            return json.GetProperty("_id").GetString()!;
+        }
+
         public async Task SendMessageAsync(string channelId, string author, string content)
         {
             var body = JsonSerializer.Serialize(new { content = $"**{author}**: {content}" });

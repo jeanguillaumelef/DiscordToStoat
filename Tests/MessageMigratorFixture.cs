@@ -16,9 +16,15 @@ namespace Tests
         internal void SetupDiscord(IEnumerable<Message> messages)
         {
             Discord
+                .Setup(r => r.GetTextChannels())
+                .Returns([new Channel(DiscordChannel, StoatChannelName)]);
+            Discord
                 .Setup(r => r.GetAllMessagesAsync(DiscordChannel))
                 .Returns(ToAsyncEnumerable(messages));
 
+            Stoat
+                .Setup(r => r.GetChannelsAsync(StoatServer))
+                .ReturnsAsync([new Channel(StoatChannel, StoatChannelName)]);
             Stoat
                 .Setup(r => r.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .Returns(Task.CompletedTask);
@@ -26,11 +32,7 @@ namespace Tests
 
         internal Task Migrate() =>
             new MessageMigrator(Discord.Object, Stoat.Object)
-                .MigrateChannelAsync(DiscordChannel, StoatChannel);
-
-        internal Task MigrateToChannel() =>
-            new MessageMigrator(Discord.Object, Stoat.Object)
-                .MigrateToChannelAsync(DiscordChannel, StoatServer, StoatChannelName);
+                .MigrateChannelAsync(DiscordChannel, StoatServer);
 
         internal static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
         {
