@@ -13,11 +13,14 @@ namespace DiscordReader
             {
                 GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
             }))
-            .AddSingleton<IDiscordRepository, DiscordRepository>()
+            .AddSingleton<Domain.IDiscordRepository, DiscordRepository>()
             .BuildServiceProvider();
 
-        public static IDiscordRepository DiscordRepository =>
-            _provider.GetRequiredService<IDiscordRepository>();
+        public static Domain.IDiscordRepository DiscordRepository =>
+            _provider.GetRequiredService<Domain.IDiscordRepository>();
+
+        public static IConfiguration Configuration =>
+            _provider.GetRequiredService<IConfiguration>();
 
         private static IConfiguration BuildConfiguration()
         {
