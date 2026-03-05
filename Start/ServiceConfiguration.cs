@@ -1,9 +1,10 @@
 using Discord;
 using Discord.WebSocket;
+using DiscordReader;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DiscordReader
+namespace Start
 {
     public static class ServiceConfiguration
     {

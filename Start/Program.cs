@@ -1,4 +1,3 @@
-using Discord;
 using DiscordReader;
 using Domain;
 using Start;
