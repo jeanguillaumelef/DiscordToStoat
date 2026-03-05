@@ -61,7 +61,7 @@ namespace DiscordReader
         private static DomainMessage ToMessage(IMessage m) =>
             new(
                 m.Author.Username,
-                m.Content,
+                m.CleanContent,
                 m.Timestamp,
                 m.Attachments.Select(a => new DomainAttachment(a.Filename, a.Url)).ToList()
             );
