@@ -60,11 +60,23 @@ namespace StoatWriter
 
         public async Task SendMessageAsync(string channelId, string author, string content)
         {
-            var body = JsonSerializer.Serialize(new { content = $"**{author}**: {content}" });
-            var response = await _client.PostAsync(
-                $"/channels/{channelId}/messages",
-                new StringContent(body, Encoding.UTF8, "application/json"));
-            response.EnsureSuccessStatusCode();
+            var body = JsonSerializer.Serialize(new { content, masquerade = new { name = author } });
+            while (true)
+            {
+                var response = await _client.PostAsync(
+                    $"/channels/{channelId}/messages",
+                    new StringContent(body, Encoding.UTF8, "application/json"));
+
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(1);
+                    await Task.Delay(retryAfter);
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+                break;
+            }
         }
 
         public string GetUserMention(string userId) => $"<@{userId}>";
