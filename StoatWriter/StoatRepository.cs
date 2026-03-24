@@ -58,25 +58,37 @@ namespace StoatWriter
             return json.GetProperty("_id").GetString()!;
         }
 
-        public async Task SendMessageAsync(string channelId, string author, string content)
+        public async Task<bool> TrySendMessageAsync(string channelId, string author, string content)
         {
             var body = JsonSerializer.Serialize(new { content, masquerade = new { name = author } });
             while (true)
             {
-                var response = await _client.PostAsync(
-                    $"/channels/{channelId}/messages",
-                    new StringContent(body, Encoding.UTF8, "application/json"));
-
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(1);
-                    await Task.Delay(retryAfter);
-                    continue;
-                }
-
-                response.EnsureSuccessStatusCode();
-                break;
+                var result = await TrySendMessageOnceAsync($"/channels/{channelId}/messages", body);
+                if (result.HasValue)
+                    return result.Value;
             }
+        }
+
+        private async Task<bool?> TrySendMessageOnceAsync(string url, string body)
+        {
+            HttpResponseMessage response;
+            try
+            {
+                response = await _client.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
+            }
+            catch (HttpRequestException)
+            {
+                return false;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(1);
+                await Task.Delay(retryAfter);
+                return null;
+            }
+
+            return response.IsSuccessStatusCode;
         }
 
         public string GetUserMention(string userId) => $"<@{userId}>";

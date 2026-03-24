@@ -26,8 +26,8 @@ namespace Tests
                 .Setup(r => r.GetChannelsAsync(StoatServer))
                 .ReturnsAsync([new Channel(StoatChannel, StoatChannelName)]);
             Stoat
-                .Setup(r => r.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
+                .Setup(r => r.TrySendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
         }
 
         internal Task Migrate() =>

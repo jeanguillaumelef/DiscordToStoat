@@ -8,7 +8,7 @@ namespace Tests
         private readonly MessageMigratorFixture _fixture = new();
 
         [Fact]
-        public async Task MigrateChannelAsync_CallsSendMessageAsync_ForEachDiscordMessage()
+        public async Task MigrateChannelAsync_CallsTrySendMessageAsync_ForEachDiscordMessage()
         {
             var messages = new List<Message>
             {
@@ -20,8 +20,8 @@ namespace Tests
 
             await _fixture.Migrate();
 
-            _fixture.Stoat.Verify(r => r.SendMessageAsync(MessageMigratorFixture.StoatChannel, "Author1", "Hello"), Times.Once);
-            _fixture.Stoat.Verify(r => r.SendMessageAsync(MessageMigratorFixture.StoatChannel, "Author2", "World"), Times.Once);
+            _fixture.Stoat.Verify(r => r.TrySendMessageAsync(MessageMigratorFixture.StoatChannel, "Author1", "Hello"), Times.Once);
+            _fixture.Stoat.Verify(r => r.TrySendMessageAsync(MessageMigratorFixture.StoatChannel, "Author2", "World"), Times.Once);
         }
 
         [Fact]
@@ -34,7 +34,7 @@ namespace Tests
 
             await _fixture.Migrate();
 
-            _fixture.Stoat.Verify(r => r.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(200));
+            _fixture.Stoat.Verify(r => r.TrySendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(200));
         }
 
         [Fact]
@@ -50,9 +50,9 @@ namespace Tests
 
             _fixture.SetupDiscord(messages);
             _fixture.Stoat
-                .Setup(r => r.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(r => r.TrySendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .Callback<string, string, string>((_, _, content) => sentOrder.Add(content))
-                .Returns(Task.CompletedTask);
+                .ReturnsAsync(true);
 
             await _fixture.Migrate();
 
@@ -72,7 +72,7 @@ namespace Tests
             await _fixture.Migrate();
 
             _fixture.Stoat.Verify(r => r.CreateChannelAsync(MessageMigratorFixture.StoatServer, MessageMigratorFixture.StoatChannelName), Times.Once);
-            _fixture.Stoat.Verify(r => r.SendMessageAsync(MessageMigratorFixture.StoatChannel, "Author", "Hello"), Times.Once);
+            _fixture.Stoat.Verify(r => r.TrySendMessageAsync(MessageMigratorFixture.StoatChannel, "Author", "Hello"), Times.Once);
         }
 
         [Fact]
@@ -82,7 +82,7 @@ namespace Tests
 
             await _fixture.Migrate();
 
-            _fixture.Stoat.Verify(r => r.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _fixture.Stoat.Verify(r => r.TrySendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
     }
 }
