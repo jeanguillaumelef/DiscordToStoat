@@ -1,4 +1,0 @@
-#!/bin/sh
-# Block the push if the test suite fails. Bypass in an emergency with:
-#   git push --no-verify
-node --test

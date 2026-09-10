@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs the test suite; aborts the commit on failure.
+
+node --test
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo "❌ Tests failed, commit aborted."
+  echo "   (Use --no-verify to bypass intentionally.)"
+fi
+exit $status
