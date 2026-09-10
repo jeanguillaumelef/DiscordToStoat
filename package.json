@@ -1,0 +1,11 @@
+{
+  "name": "discord-to-stoat",
+  "version": "0.1.0",
+  "description": "Discord to Stoat integration",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "MIT"
+}
