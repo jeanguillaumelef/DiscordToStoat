@@ -1,5 +1,6 @@
-import { Channel, Client, Message } from "stoat.js";
+import { Client, Message } from "stoat.js";
 
+import type { Channel } from "../domain/channel.js";
 import type { User } from "../domain/user.js";
 
 /** Default time to wait for the `ready` event before giving up. */
@@ -97,7 +98,10 @@ export class StoatRepository {
     const server = this.client.servers.get(serverId);
     if (!server) throw new Error(`unknown stoat server: ${serverId}`);
 
-    return server.channels;
+    return server.channels.map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+    }));
   }
 
   /**
