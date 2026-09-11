@@ -23,8 +23,17 @@ if (servers.length === 0) {
   console.log(`Visible servers (${servers.length}):`);
   for (const server of servers) {
     console.log(`  - ${server.name} (${server.id})`);
-    for (const channel of stoat.listChannels(server.id)) {
+    const channels = stoat.listChannels(server.id);
+    for (const channel of channels) {
       console.log(`      # ${channel.name} (${channel.id})`);
+    }
+
+    const testChannel = channels.find((channel) => channel.name === "TestChannel");
+    if (testChannel) {
+      await stoat.sendMessage(testChannel.id, "test", {
+        displayName: "Prontonpon",
+      });
+      console.log(`Sent a test message to #${testChannel.name}.`);
     }
   }
 }

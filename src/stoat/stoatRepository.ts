@@ -1,4 +1,6 @@
-import { Channel, Client } from "stoat.js";
+import { Channel, Client, Message } from "stoat.js";
+
+import type { User } from "../domain/user.js";
 
 /** Default time to wait for the `ready` event before giving up. */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -96,5 +98,25 @@ export class StoatRepository {
     if (!server) throw new Error(`unknown stoat server: ${serverId}`);
 
     return server.channels;
+  }
+
+  /**
+   * Send a message to a channel, optionally masquerading as the given user
+   * (e.g. the Discord user being bridged) via their display name and avatar.
+   */
+  async sendMessage(
+    channelId: string,
+    content: string,
+    user?: User,
+  ): Promise<Message> {
+    if (!this.client) throw new Error("stoat repository is not connected");
+
+    const channel = this.client.channels.get(channelId);
+    if (!channel) throw new Error(`unknown stoat channel: ${channelId}`);
+
+    return channel.sendMessage({
+      content,
+      masquerade: user && { name: user.displayName, avatar: user.avatarUrl },
+    });
   }
 }
