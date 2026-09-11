@@ -105,6 +105,25 @@ export class StoatRepository {
   }
 
   /**
+   * Create a new text channel on a server. Throws if a channel with that
+   * name already exists there (channel names aren't unique to the Stoat
+   * API, so this repository enforces it instead).
+   */
+  async createChannel(serverId: string, name: string): Promise<Channel> {
+    if (!this.client) throw new Error("stoat repository is not connected");
+
+    const server = this.client.servers.get(serverId);
+    if (!server) throw new Error(`unknown stoat server: ${serverId}`);
+
+    if (server.channels.some((channel) => channel.name === name)) {
+      throw new Error(`stoat channel already exists: ${name}`);
+    }
+
+    const channel = await server.createChannel({ name });
+    return { id: channel.id, name: channel.name };
+  }
+
+  /**
    * Send a message to a channel, optionally masquerading as the given user
    * (e.g. the Discord user being bridged) via their display name and avatar.
    */

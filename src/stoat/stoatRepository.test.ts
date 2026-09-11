@@ -12,8 +12,25 @@ type Listener = (...args: unknown[]) => void;
 /** Minimal stand-in for the `stoat.js` Channel class. */
 type FakeChannel = { id: string; name: string };
 
-/** Minimal stand-in for the `stoat.js` Server class: just `channels`. */
-type FakeServer = { channels: FakeChannel[] };
+/**
+ * Minimal stand-in for the `stoat.js` Server class: `channels`, plus an
+ * optional `createChannel` for the tests that need it.
+ */
+type FakeServer = {
+  channels: FakeChannel[];
+  createChannel?: (data: unknown) => Promise<FakeChannel>;
+};
+
+/** Minimal stand-in for a server whose `createChannel()` succeeds. */
+function fakeCreatableServer(channels: FakeChannel[] = []): FakeServer {
+  return {
+    channels,
+    async createChannel(data: unknown) {
+      const { name } = data as { name: string };
+      return { id: `${name}-id`, name };
+    },
+  };
+}
 
 /** Minimal stand-in for a sendable `stoat.js` Channel: just `sendMessage`. */
 function fakeSendableChannel() {
@@ -156,6 +173,41 @@ test("listChannels() throws when not connected", () => {
   const repo = new StoatRepository({ token: "bot-token" });
 
   assert.throws(() => repo.listChannels("server-1"), /not connected/);
+});
+
+test("createChannel() creates and returns the new channel", async () => {
+  const server = fakeCreatableServer();
+  const client = fakeClient(
+    (c) => queueMicrotask(() => c.emit("ready")),
+    { "server-1": server },
+  );
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  const result = await repo.createChannel("server-1", "general");
+
+  assert.deepEqual(result, { id: "general-id", name: "general" });
+});
+
+test("createChannel() throws when a channel with that name already exists", async () => {
+  const server = fakeCreatableServer([{ id: "channel-1", name: "general" }]);
+  const client = fakeClient(
+    (c) => queueMicrotask(() => c.emit("ready")),
+    { "server-1": server },
+  );
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  await assert.rejects(
+    repo.createChannel("server-1", "general"),
+    /stoat channel already exists: general/,
+  );
 });
 
 test("sendMessage() sends the content to the channel", async () => {
