@@ -21,72 +21,70 @@ export interface StoatRepositoryConfig {
   createClient?: () => Client;
 }
 
-export interface StoatRepository {
+/** Manages all interactions with a Stoat server: connecting, sending, etc. */
+export class StoatRepository {
+  private readonly token: string;
+  private readonly timeoutMs: number;
+  private readonly makeClient: () => Client;
+  private client: Client | undefined;
+
+  constructor({ token, baseURL, timeoutMs = DEFAULT_TIMEOUT_MS, createClient }: StoatRepositoryConfig) {
+    if (!token) throw new Error("stoat repository requires a bot token");
+
+    this.token = token;
+    this.timeoutMs = timeoutMs;
+    this.makeClient = createClient ?? (() => new Client(baseURL ? { baseURL } : undefined));
+  }
+
   /**
    * Connect to the Stoat server: log the bot in and wait for the live
    * session to be ready.
    */
-  connect(): Promise<Client>;
-}
+  async connect(): Promise<Client> {
+    const client = this.makeClient();
+    let cleanup = () => {};
 
-/** Build the Stoat adapter. */
-export function createStoatRepository({
-  token,
-  baseURL,
-  timeoutMs = DEFAULT_TIMEOUT_MS,
-  createClient,
-}: StoatRepositoryConfig): StoatRepository {
-  if (!token) throw new Error("stoat repository requires a bot token");
-
-  const makeClient =
-    createClient ?? (() => new Client(baseURL ? { baseURL } : undefined));
-
-  return {
-    async connect() {
-      const client = makeClient();
-      let cleanup = () => {};
-
-      const ready = new Promise<Client>((resolve, reject) => {
-        const onReady = () => {
-          cleanup();
-          resolve(client);
-        };
-        const onError = (error: unknown) => {
-          cleanup();
-          reject(
-            error instanceof Error
-              ? error
-              : new Error(`stoat connection failed: ${JSON.stringify(error)}`),
-          );
-        };
-        const timer =
-          Number.isFinite(timeoutMs) && timeoutMs > 0
-            ? setTimeout(() => {
-                cleanup();
-                reject(
-                  new Error(`stoat connection timed out after ${timeoutMs}ms`),
-                );
-              }, timeoutMs)
-            : undefined;
-
-        cleanup = () => {
-          clearTimeout(timer);
-          client.off("ready", onReady);
-          client.off("error", onError);
-        };
-
-        client.once("ready", onReady);
-        client.once("error", onError);
-      });
-
-      try {
-        await client.loginBot(token);
-        return await ready;
-      } catch (error) {
+    const ready = new Promise<Client>((resolve, reject) => {
+      const onReady = () => {
         cleanup();
-        ready.catch(() => {}); // a later timeout/error must not go unhandled
-        throw error;
-      }
-    },
-  };
+        resolve(client);
+      };
+      const onError = (error: unknown) => {
+        cleanup();
+        reject(
+          error instanceof Error
+            ? error
+            : new Error(`stoat connection failed: ${JSON.stringify(error)}`),
+        );
+      };
+      const timer =
+        Number.isFinite(this.timeoutMs) && this.timeoutMs > 0
+          ? setTimeout(() => {
+              cleanup();
+              reject(
+                new Error(`stoat connection timed out after ${this.timeoutMs}ms`),
+              );
+            }, this.timeoutMs)
+          : undefined;
+
+      cleanup = () => {
+        clearTimeout(timer);
+        client.off("ready", onReady);
+        client.off("error", onError);
+      };
+
+      client.once("ready", onReady);
+      client.once("error", onError);
+    });
+
+    try {
+      await client.loginBot(this.token);
+      this.client = await ready;
+      return this.client;
+    } catch (error) {
+      cleanup();
+      ready.catch(() => {}); // a later timeout/error must not go unhandled
+      throw error;
+    }
+  }
 }

@@ -3,7 +3,7 @@ import test from "node:test";
 
 import type { Client } from "stoat.js";
 import {
-  createStoatRepository,
+  StoatRepository,
   type StoatRepositoryConfig,
 } from "./stoatRepository.js";
 
@@ -44,7 +44,7 @@ type FakeClient = ReturnType<typeof fakeClient>;
 
 test("connect() logs the bot in and resolves with the ready client", async () => {
   const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
-  const repo = createStoatRepository({
+  const repo = new StoatRepository({
     token: "bot-token",
     createClient: () => client as unknown as Client,
   });
@@ -59,7 +59,7 @@ test("connect() rejects when the client emits an error", async () => {
   const client = fakeClient((c) =>
     queueMicrotask(() => c.emit("error", { type: "InvalidSession" })),
   );
-  const repo = createStoatRepository({
+  const repo = new StoatRepository({
     token: "bot-token",
     createClient: () => client as unknown as Client,
   });
@@ -68,7 +68,7 @@ test("connect() rejects when the client emits an error", async () => {
 });
 
 test("connect() rejects when the client never becomes ready", async () => {
-  const repo = createStoatRepository({
+  const repo = new StoatRepository({
     token: "bot-token",
     timeoutMs: 10,
     createClient: () => fakeClient() as unknown as Client, // loginBot resolves, but no "ready"
@@ -79,7 +79,7 @@ test("connect() rejects when the client never becomes ready", async () => {
 
 test("connect() propagates a loginBot() failure", async () => {
   const boom = new Error("bad token");
-  const repo = createStoatRepository({
+  const repo = new StoatRepository({
     token: "bot-token",
     createClient: () =>
       fakeClient(() => {
@@ -90,9 +90,9 @@ test("connect() propagates a loginBot() failure", async () => {
   await assert.rejects(repo.connect(), boom);
 });
 
-test("createStoatRepository() throws without a token", () => {
+test("new StoatRepository() throws without a token", () => {
   assert.throws(
-    () => createStoatRepository({} as StoatRepositoryConfig),
+    () => new StoatRepository({} as StoatRepositoryConfig),
     /bot token/,
   );
 });

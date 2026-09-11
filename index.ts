@@ -1,4 +1,4 @@
-import { createStoatRepository } from "./src/stoat/stoatRepository.js";
+import { StoatRepository } from "./src/stoat/stoatRepository.js";
 
 const token = process.env.STOAT_TOKEN;
 if (!token) {
@@ -8,7 +8,7 @@ if (!token) {
   process.exit(1);
 }
 
-const stoat = createStoatRepository({
+const stoat = new StoatRepository({
   token,
   baseURL: process.env.STOAT_BASE_URL,
 });
