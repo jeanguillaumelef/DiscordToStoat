@@ -3,12 +3,18 @@
   "version": "0.1.0",
   "description": "Discord to Stoat integration",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node --env-file=.env index.js"
+    "build": "tsc",
+    "start": "npm run build && node --env-file=.env dist/index.js",
+    "test": "npm run build && node --test \"dist/**/*.test.js\""
   },
   "license": "MIT",
   "dependencies": {
     "stoat.js": "^7.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,34 +1,38 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createStoatRepository } from "./stoatRepository.js";
+import type { Client } from "stoat.js";
+import {
+  createStoatRepository,
+  type StoatRepositoryConfig,
+} from "./stoatRepository.js";
+
+type Listener = (...args: unknown[]) => void;
 
 /**
  * Minimal stand-in for the `stoat.js` Client: just the event surface
- * (`once` / `off`) and `loginBot` that `connect()` touches.
- * @param {(fake: any) => void} [onLoginBot] side effect to run when
- *   `loginBot` is called (e.g. emit `ready` or `error`).
+ * (`once` / `off`) and `loginBot` that `connect()` touches. Cast to `Client`
+ * at the call site since it doesn't implement the SDK's full surface.
  */
-function fakeClient(onLoginBot) {
-  /** @type {Map<string, Set<Function>>} */
-  const listeners = new Map();
+function fakeClient(onLoginBot?: (fake: FakeClient) => void | Promise<void>) {
+  const listeners = new Map<string, Set<Listener>>();
   const fake = {
-    loginBotCalls: /** @type {string[]} */ ([]),
-    once(event, cb) {
-      const wrapped = (...args) => {
+    loginBotCalls: [] as string[],
+    once(event: string, cb: Listener) {
+      const wrapped: Listener = (...args) => {
         fake.off(event, wrapped);
         cb(...args);
       };
       if (!listeners.has(event)) listeners.set(event, new Set());
-      listeners.get(event).add(wrapped);
+      listeners.get(event)!.add(wrapped);
     },
-    off(event, cb) {
+    off(event: string, cb: Listener) {
       listeners.get(event)?.delete(cb);
     },
-    emit(event, ...args) {
+    emit(event: string, ...args: unknown[]) {
       for (const cb of [...(listeners.get(event) ?? [])]) cb(...args);
     },
-    async loginBot(token) {
+    async loginBot(token: string) {
       fake.loginBotCalls.push(token);
       await onLoginBot?.(fake);
     },
@@ -36,11 +40,13 @@ function fakeClient(onLoginBot) {
   return fake;
 }
 
+type FakeClient = ReturnType<typeof fakeClient>;
+
 test("connect() logs the bot in and resolves with the ready client", async () => {
   const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
   const repo = createStoatRepository({
     token: "bot-token",
-    createClient: () => client,
+    createClient: () => client as unknown as Client,
   });
 
   const connected = await repo.connect();
@@ -55,7 +61,7 @@ test("connect() rejects when the client emits an error", async () => {
   );
   const repo = createStoatRepository({
     token: "bot-token",
-    createClient: () => client,
+    createClient: () => client as unknown as Client,
   });
 
   await assert.rejects(repo.connect(), /InvalidSession/);
@@ -65,7 +71,7 @@ test("connect() rejects when the client never becomes ready", async () => {
   const repo = createStoatRepository({
     token: "bot-token",
     timeoutMs: 10,
-    createClient: () => fakeClient(), // loginBot resolves, but no "ready"
+    createClient: () => fakeClient() as unknown as Client, // loginBot resolves, but no "ready"
   });
 
   await assert.rejects(repo.connect(), /timed out after 10ms/);
@@ -78,12 +84,15 @@ test("connect() propagates a loginBot() failure", async () => {
     createClient: () =>
       fakeClient(() => {
         throw boom;
-      }),
+      }) as unknown as Client,
   });
 
   await assert.rejects(repo.connect(), boom);
 });
 
 test("createStoatRepository() throws without a token", () => {
-  assert.throws(() => createStoatRepository({}), /bot token/);
+  assert.throws(
+    () => createStoatRepository({} as StoatRepositoryConfig),
+    /bot token/,
+  );
 });

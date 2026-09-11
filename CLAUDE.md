@@ -10,16 +10,20 @@ as Revolt). The long-term goal is to mirror/forward Discord activity into a Stoa
 
 ## Stack
 
-- Node.js >= 20, plain JavaScript, **ESM only** (`"type": "module"` in `package.json`).
-- Do not add TypeScript or a build step. Use JSDoc for types where they help.
+- Node.js >= 20, TypeScript (strict mode), **ESM only** (`"type": "module"` in `package.json`).
+- Source lives as `.ts`; `tsc` compiles it to `dist/` before it runs. `dist/` is generated and
+  gitignored — never hand-edit or commit it.
 
 ## Commands
 
 ```bash
-npm start   # node --env-file=.env index.js
+npm run build   # tsc — compiles src/**/*.ts and index.ts to dist/
+npm start       # npm run build && node --env-file=.env dist/index.js
+npm test        # npm run build && node --test "dist/**/*.test.js"
 ```
 
-That is the only script. Do not document or reference scripts that don't exist in `package.json`.
+Those are the only scripts. Do not document or reference scripts that don't exist in
+`package.json`.
 
 ## Layout
 
@@ -27,17 +31,18 @@ Hexagonal architecture (ports and adapters). "Repository" in this project means 
 system (Discord, Stoat), not a DDD persistence repository.
 
 ```
-index.js                 # composition root: reads process.env, builds adapters, wires them into the domain
-src/domain/              # business logic + port definitions (JSDoc @typedef)
+index.ts                 # composition root: reads process.env, builds adapters, wires them into the domain
+src/domain/              # business logic + port definitions (TypeScript interfaces/types)
 src/<repositoryName>/    # one adapter folder per external system: src/discord/, src/stoat/
 ```
 
-- Put tests next to the module they test: `foo.js` → `foo.test.js`. Never create a `test/` directory.
+- Put tests next to the module they test: `foo.ts` → `foo.test.ts`. Never create a `test/`
+  directory.
 - Create a folder only when its first real module is written.
 
 When editing `src/domain/`:
 - Keep it pure: no network, filesystem, `process.env`, or third-party packages.
-- Define ports as JSDoc `@typedef`s. Adapters implement them.
+- Define ports as TypeScript interfaces/types. Adapters implement them.
 - Receive adapters as function arguments. Never import an adapter.
 - Test with in-memory fakes of the ports, never real adapters.
 
@@ -48,10 +53,13 @@ When editing `src/<repositoryName>/`:
 
 ## Conventions
 
-- Always include the `.js` extension in relative imports (`./src/foo.js`) — required by ESM.
+- Always include the `.js` extension in relative imports, even inside `.ts` files
+  (`./src/foo.js`, not `./src/foo.ts`) — required by ESM/`NodeNext` module resolution, since the
+  import is resolved against the compiled output in `dist/`, not the `.ts` source.
 - Use `node:`-prefixed builtins (`node:fs`, `node:test`).
 - Use named exports. Never use default exports.
 - Use async/await, not raw promise chains. Never leave a promise unhandled.
+- Avoid `any`; prefer `unknown` with narrowing when a type genuinely isn't known.
 - Secrets (Discord/Stoat tokens) go in `.env`, which is gitignored. Never commit tokens. Add
   new variables to `.env.example` when they are introduced.
 - Prefer builtins first. When a package is needed, use `npm install <pkg>` (or `--save-dev`) so
@@ -59,8 +67,10 @@ When editing `src/<repositoryName>/`:
 
 ## Tooling
 
-- Tests: Node's built-in runner (`node --test`) with `node:assert/strict`. Never add Jest,
-  Vitest, or another test framework.
+- Tests: Node's built-in runner (`node --test`) with `node:assert/strict`, run against the
+  compiled `dist/` output via `npm test`. Never add Jest, Vitest, or another test framework.
+- Type-check as part of the build (`tsc` fails the build on type errors); there is no separate
+  typecheck script.
 - Lint/format: ESLint (flat config) + Prettier. Run them only through scripts that exist in `package.json`.
 
 ## Working with the owner

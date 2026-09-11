@@ -1,7 +1,7 @@
 #!/bin/sh
 # Runs the test suite; aborts the commit on failure.
 
-node --test
+npm test
 status=$?
 
 if [ $status -ne 0 ]; then
