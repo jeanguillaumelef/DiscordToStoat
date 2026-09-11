@@ -1,4 +1,4 @@
-import { Client } from "stoat.js";
+import { Channel, Client } from "stoat.js";
 
 /** Default time to wait for the `ready` event before giving up. */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -86,5 +86,15 @@ export class StoatRepository {
       ready.catch(() => {}); // a later timeout/error must not go unhandled
       throw error;
     }
+  }
+
+  /** List the channels on a server the bot can see. */
+  listChannels(serverId: string): Channel[] {
+    if (!this.client) throw new Error("stoat repository is not connected");
+
+    const server = this.client.servers.get(serverId);
+    if (!server) throw new Error(`unknown stoat server: ${serverId}`);
+
+    return server.channels;
   }
 }

@@ -9,15 +9,28 @@ import {
 
 type Listener = (...args: unknown[]) => void;
 
+/** Minimal stand-in for the `stoat.js` Channel class. */
+type FakeChannel = { id: string; name: string };
+
+/** Minimal stand-in for the `stoat.js` Server class: just `channels`. */
+type FakeServer = { channels: FakeChannel[] };
+
 /**
  * Minimal stand-in for the `stoat.js` Client: just the event surface
- * (`once` / `off`) and `loginBot` that `connect()` touches. Cast to `Client`
- * at the call site since it doesn't implement the SDK's full surface.
+ * (`once` / `off`), `loginBot`, and `servers.get` that `connect()` and
+ * `listChannels()` touch. Cast to `Client` at the call site since it doesn't
+ * implement the SDK's full surface.
  */
-function fakeClient(onLoginBot?: (fake: FakeClient) => void | Promise<void>) {
+function fakeClient(
+  onLoginBot?: (fake: FakeClient) => void | Promise<void>,
+  servers: Record<string, FakeServer> = {},
+) {
   const listeners = new Map<string, Set<Listener>>();
   const fake = {
     loginBotCalls: [] as string[],
+    servers: {
+      get: (id: string) => servers[id],
+    },
     once(event: string, cb: Listener) {
       const wrapped: Listener = (...args) => {
         fake.off(event, wrapped);
@@ -88,6 +101,43 @@ test("connect() propagates a loginBot() failure", async () => {
   });
 
   await assert.rejects(repo.connect(), boom);
+});
+
+test("listChannels() returns the server's channels", async () => {
+  const channels: FakeChannel[] = [
+    { id: "channel-1", name: "general" },
+    { id: "channel-2", name: "random" },
+  ];
+  const client = fakeClient(
+    (c) => queueMicrotask(() => c.emit("ready")),
+    { "server-1": { channels } },
+  );
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  const result = repo.listChannels("server-1");
+
+  assert.deepEqual(result, channels);
+});
+
+test("listChannels() throws for an unknown server", async () => {
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  assert.throws(() => repo.listChannels("unknown"), /unknown stoat server/);
+});
+
+test("listChannels() throws when not connected", () => {
+  const repo = new StoatRepository({ token: "bot-token" });
+
+  assert.throws(() => repo.listChannels("server-1"), /not connected/);
 });
 
 test("new StoatRepository() throws without a token", () => {

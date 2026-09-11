@@ -23,6 +23,9 @@ if (servers.length === 0) {
   console.log(`Visible servers (${servers.length}):`);
   for (const server of servers) {
     console.log(`  - ${server.name} (${server.id})`);
+    for (const channel of stoat.listChannels(server.id)) {
+      console.log(`      # ${channel.name} (${channel.id})`);
+    }
   }
 }
 
