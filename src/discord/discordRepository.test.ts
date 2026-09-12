@@ -9,15 +9,42 @@ import {
 
 type Listener = (...args: unknown[]) => void;
 
+/** Minimal stand-in for a `discord.js` guild-based channel. */
+type FakeChannel = { id: string; name: string };
+
+/**
+ * Minimal stand-in for a `discord.js` Guild: just the `channels.cache` map
+ * that `listChannels()` touches.
+ */
+type FakeGuild = { channels: { cache: Map<string, FakeChannel> } };
+
+/** Build a fake guild from a plain array of channels. */
+function fakeGuild(channels: FakeChannel[]): FakeGuild {
+  return {
+    channels: {
+      cache: new Map(channels.map((channel) => [channel.id, channel])),
+    },
+  };
+}
+
 /**
  * Minimal stand-in for the `discord.js` Client: just the event surface
- * (`once` / `off`) and `login` that `connect()` touches. Cast to `Client` at
- * the call site since it doesn't implement the SDK's full surface.
+ * (`once` / `off`), `login`, and `guilds.cache.get` that `connect()` and
+ * `listChannels()` touch. Cast to `Client` at the call site since it doesn't
+ * implement the SDK's full surface.
  */
-function fakeClient(onLogin?: (fake: FakeClient) => void | Promise<void>) {
+function fakeClient(
+  onLogin?: (fake: FakeClient) => void | Promise<void>,
+  guilds: Record<string, FakeGuild> = {},
+) {
   const listeners = new Map<string, Set<Listener>>();
   const fake = {
     loginCalls: [] as string[],
+    guilds: {
+      cache: {
+        get: (id: string) => guilds[id],
+      },
+    },
     once(event: string, cb: Listener) {
       const wrapped: Listener = (...args) => {
         fake.off(event, wrapped);
@@ -96,4 +123,41 @@ test("new DiscordRepository() throws without a token", () => {
     () => new DiscordRepository({} as DiscordRepositoryConfig),
     /bot token/,
   );
+});
+
+test("listChannels() returns the guild's channels", async () => {
+  const channels: FakeChannel[] = [
+    { id: "channel-1", name: "general" },
+    { id: "channel-2", name: "random" },
+  ];
+  const client = fakeClient(
+    (c) => queueMicrotask(() => c.emit("ready")),
+    { "guild-1": fakeGuild(channels) },
+  );
+  const repo = new DiscordRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  const result = repo.listChannels("guild-1");
+
+  assert.deepEqual(result, channels);
+});
+
+test("listChannels() throws for an unknown guild", async () => {
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
+  const repo = new DiscordRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  assert.throws(() => repo.listChannels("unknown"), /unknown discord guild/);
+});
+
+test("listChannels() throws when not connected", () => {
+  const repo = new DiscordRepository({ token: "bot-token" });
+
+  assert.throws(() => repo.listChannels("guild-1"), /not connected/);
 });

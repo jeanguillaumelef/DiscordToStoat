@@ -1,5 +1,7 @@
 import { Client, GatewayIntentBits } from "discord.js";
 
+import type { Channel } from "../domain/channel.js";
+
 /** Default time to wait for the `ready` event before giving up. */
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -95,5 +97,18 @@ export class DiscordRepository {
       ready.catch(() => {}); // a later timeout/error must not go unhandled
       throw error;
     }
+  }
+
+  /** List the channels on a guild the bot can see. */
+  listChannels(guildId: string): Channel[] {
+    if (!this.client) throw new Error("discord repository is not connected");
+
+    const guild = this.client.guilds.cache.get(guildId);
+    if (!guild) throw new Error(`unknown discord guild: ${guildId}`);
+
+    return [...guild.channels.cache.values()].map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+    }));
   }
 }
