@@ -3,8 +3,16 @@ import { Client, GatewayIntentBits } from "discord.js";
 /** Default time to wait for the `ready` event before giving up. */
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-/** Minimum intents needed to see the bot's guilds. */
-const DEFAULT_INTENTS = [GatewayIntentBits.Guilds];
+/**
+ * Intents needed to see guilds/channels and read message content.
+ * `MessageContent` is privileged and must also be enabled for the bot in the
+ * Discord Developer Portal, or `login` will be rejected.
+ */
+const DEFAULT_INTENTS = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.MessageContent,
+];
 
 export interface DiscordRepositoryConfig {
   /** Bot token used with `login`. */
