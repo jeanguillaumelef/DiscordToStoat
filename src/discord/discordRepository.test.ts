@@ -71,7 +71,7 @@ function fakeClient(
 type FakeClient = ReturnType<typeof fakeClient>;
 
 test("connect() logs the bot in and resolves with the ready client", async () => {
-  const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("clientReady")));
   const repo = new DiscordRepository({
     token: "bot-token",
     createClient: () => client as unknown as Client,
@@ -99,7 +99,7 @@ test("connect() rejects when the client never becomes ready", async () => {
   const repo = new DiscordRepository({
     token: "bot-token",
     timeoutMs: 10,
-    createClient: () => fakeClient() as unknown as Client, // login resolves, but no "ready"
+    createClient: () => fakeClient() as unknown as Client,
   });
 
   await assert.rejects(repo.connect(), /timed out after 10ms/);
@@ -131,7 +131,7 @@ test("listChannels() returns the guild's channels", async () => {
     { id: "channel-2", name: "random" },
   ];
   const client = fakeClient(
-    (c) => queueMicrotask(() => c.emit("ready")),
+    (c) => queueMicrotask(() => c.emit("clientReady")),
     { "guild-1": fakeGuild(channels) },
   );
   const repo = new DiscordRepository({
@@ -146,7 +146,7 @@ test("listChannels() returns the guild's channels", async () => {
 });
 
 test("listChannels() throws for an unknown guild", async () => {
-  const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("clientReady")));
   const repo = new DiscordRepository({
     token: "bot-token",
     createClient: () => client as unknown as Client,

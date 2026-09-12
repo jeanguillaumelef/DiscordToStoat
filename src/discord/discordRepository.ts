@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 
 import type { Channel } from "../domain/channel.js";
 
-/** Default time to wait for the `ready` event before giving up. */
+/** Default time to wait for the `clientReady` event before giving up. */
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /**
@@ -80,11 +80,11 @@ export class DiscordRepository {
 
       cleanup = () => {
         clearTimeout(timer);
-        client.off("ready", onReady);
+        client.off("clientReady", onReady);
         client.off("error", onError);
       };
 
-      client.once("ready", onReady);
+      client.once("clientReady", onReady);
       client.once("error", onError);
     });
 
