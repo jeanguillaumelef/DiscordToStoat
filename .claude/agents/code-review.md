@@ -41,6 +41,7 @@ Do NOT run any other git commands beyond what is specified.
 - Documentation and comments
 - Security considerations (secrets, input validation)
 - TypeScript idioms: code that reads like JavaScript with type annotations (see "TypeScript Idioms")
+-Flag magic strings: meaningful literals (statuses, keys, event names, flags, roles) that are repeated or used in comparisons. Suggest a constant or enum. Ignore log/exception messages, test data, and one-off literals.
 
 **REVIEW CATEGORIES:**
 
