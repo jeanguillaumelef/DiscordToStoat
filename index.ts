@@ -1,3 +1,4 @@
+import { ChannelMigrator } from "./src/domain/channelMigrator.js";
 import { DiscordRepository } from "./src/discord/discordRepository.js";
 import { StoatRepository } from "./src/stoat/stoatRepository.js";
 
@@ -58,8 +59,10 @@ if (servers.length === 0) {
 
     const testChannel = channels.find((channel) => channel.name === "TestChannel");
     if (testChannel) {
-      await stoat.sendMessage(server.id, testChannel.name, "test", {
-        displayName: "Prontonpon",
+      const migrator = new ChannelMigrator(stoat, server.id);
+      await migrator.migrateMessage(testChannel, {
+        content: "test",
+        author: { displayName: "Prontonpon" },
       });
       console.log(`Sent a test message to #${testChannel.name}.`);
     }
