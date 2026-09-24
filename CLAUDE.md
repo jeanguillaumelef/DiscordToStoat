@@ -73,6 +73,8 @@ When editing `src/<repositoryName>/`:
   typecheck script.
 - Lint/format: ESLint (flat config) + Prettier. Run them only through scripts that exist in `package.json`.
 
+- Python is not installed. Never use it for scripting or edits; use Node or the editor tools.
+
 ## Working with the owner
 
 Do only what is asked. Do not add tooling, restructure files, or install dependencies as a
