@@ -58,7 +58,7 @@ if (servers.length === 0) {
 
     const testChannel = channels.find((channel) => channel.name === "TestChannel");
     if (testChannel) {
-      await stoat.sendMessage(testChannel.id, "test", {
+      await stoat.sendMessage(server.id, testChannel.name, "test", {
         displayName: "Prontonpon",
       });
       console.log(`Sent a test message to #${testChannel.name}.`);

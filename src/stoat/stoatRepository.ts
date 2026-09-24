@@ -135,18 +135,23 @@ export class StoatRepository {
   }
 
   /**
-   * Send a message to a channel, optionally masquerading as the given user
-   * (e.g. the Discord user being bridged) via their display name and avatar.
+   * Send a message to the channel with the given name on a server,
+   * optionally masquerading as the given user (e.g. the Discord user being
+   * bridged) via their display name and avatar.
    */
   async sendMessage(
-    channelId: string,
+    serverId: string,
+    channelName: string,
     content: string,
     user?: User,
   ): Promise<Message> {
     if (!this.client) throw new Error("stoat repository is not connected");
 
-    const channel = this.client.channels.get(channelId);
-    if (!channel) throw new Error(`unknown stoat channel: ${channelId}`);
+    const server = this.client.servers.get(serverId);
+    if (!server) throw new Error(`unknown stoat server: ${serverId}`);
+
+    const channel = server.channels.find((c) => c.name === channelName);
+    if (!channel) throw new Error(`unknown stoat channel: ${channelName}`);
 
     return channel.sendMessage({
       content,

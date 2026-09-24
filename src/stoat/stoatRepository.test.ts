@@ -33,9 +33,11 @@ function fakeCreatableServer(channels: FakeChannel[] = []): FakeServer {
 }
 
 /** Minimal stand-in for a sendable `stoat.js` Channel: just `sendMessage`. */
-function fakeSendableChannel() {
+function fakeSendableChannel(name = "general") {
   const sendMessageCalls: unknown[] = [];
   return {
+    id: `${name}-id`,
+    name,
     sendMessageCalls,
     async sendMessage(data: unknown) {
       sendMessageCalls.push(data);
@@ -44,18 +46,15 @@ function fakeSendableChannel() {
   };
 }
 
-type FakeSendableChannel = ReturnType<typeof fakeSendableChannel>;
-
 /**
  * Minimal stand-in for the `stoat.js` Client: just the event surface
- * (`once` / `off`), `loginBot`, `servers.get`, and `channels.get` that
- * `connect()`, `listChannels()`, and `sendMessage()` touch. Cast to `Client`
+ * (`once` / `off`), `loginBot`, and `servers.get` that `connect()`,
+ * `listChannels()`, and `sendMessage()` touch. Cast to `Client`
  * at the call site since it doesn't implement the SDK's full surface.
  */
 function fakeClient(
   onLoginBot?: (fake: FakeClient) => void | Promise<void>,
   servers: Record<string, FakeServer> = {},
-  channels: Record<string, FakeSendableChannel> = {},
 ) {
   const listeners = new Map<string, Set<Listener>>();
   const fake = {
@@ -68,9 +67,6 @@ function fakeClient(
     },
     servers: {
       get: (id: string) => servers[id],
-    },
-    channels: {
-      get: (id: string) => channels[id],
     },
     on(event: string, cb: Listener) {
       if (!listeners.has(event)) listeners.set(event, new Set());
@@ -255,8 +251,7 @@ test("sendMessage() sends the content to the channel", async () => {
   const channel = fakeSendableChannel();
   const client = fakeClient(
     (c) => queueMicrotask(() => c.emit("ready")),
-    {},
-    { "channel-1": channel },
+    { "server-1": { channels: [channel] } },
   );
   const repo = new StoatRepository({
     token: "bot-token",
@@ -264,7 +259,7 @@ test("sendMessage() sends the content to the channel", async () => {
   });
   await repo.connect();
 
-  await repo.sendMessage("channel-1", "hello");
+  await repo.sendMessage("server-1", "general", "hello");
 
   assert.deepEqual(channel.sendMessageCalls, [
     { content: "hello", masquerade: undefined },
@@ -275,8 +270,7 @@ test("sendMessage() masquerades as the given name and avatar", async () => {
   const channel = fakeSendableChannel();
   const client = fakeClient(
     (c) => queueMicrotask(() => c.emit("ready")),
-    {},
-    { "channel-1": channel },
+    { "server-1": { channels: [channel] } },
   );
   const repo = new StoatRepository({
     token: "bot-token",
@@ -284,7 +278,7 @@ test("sendMessage() masquerades as the given name and avatar", async () => {
   });
   await repo.connect();
 
-  await repo.sendMessage("channel-1", "hello", {
+  await repo.sendMessage("server-1", "general", "hello", {
     displayName: "SomeDiscordUser",
     avatarUrl: "https://example.com/avatar.png",
   });
@@ -300,7 +294,7 @@ test("sendMessage() masquerades as the given name and avatar", async () => {
   ]);
 });
 
-test("sendMessage() throws for an unknown channel", async () => {
+test("sendMessage() throws for an unknown server", async () => {
   const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
   const repo = new StoatRepository({
     token: "bot-token",
@@ -309,7 +303,24 @@ test("sendMessage() throws for an unknown channel", async () => {
   await repo.connect();
 
   await assert.rejects(
-    repo.sendMessage("unknown", "hello"),
+    repo.sendMessage("unknown", "general", "hello"),
+    /unknown stoat server/,
+  );
+});
+
+test("sendMessage() throws for an unknown channel", async () => {
+  const client = fakeClient(
+    (c) => queueMicrotask(() => c.emit("ready")),
+    { "server-1": { channels: [] } },
+  );
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+  await repo.connect();
+
+  await assert.rejects(
+    repo.sendMessage("server-1", "unknown", "hello"),
     /unknown stoat channel/,
   );
 });
@@ -318,7 +329,7 @@ test("sendMessage() throws when not connected", async () => {
   const repo = new StoatRepository({ token: "bot-token" });
 
   await assert.rejects(
-    repo.sendMessage("channel-1", "hello"),
+    repo.sendMessage("server-1", "general", "hello"),
     /not connected/,
   );
 });
