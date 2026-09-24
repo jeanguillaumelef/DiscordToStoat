@@ -45,20 +45,27 @@ export class StoatRepository {
    */
   async connect(): Promise<Client> {
     const client = this.makeClient();
+    let failConnect: ((error: Error) => void) | undefined;
     let cleanup = () => {};
+
+    // The only 'error' listener, permanent so an 'error' is never left without
+    // one. While connecting it rejects; afterwards it just logs.
+    client.on("error", (error) => {
+      if (failConnect) {
+        failConnect(
+          error instanceof Error
+            ? error
+            : new Error(`stoat connection failed: ${JSON.stringify(error)}`),
+        );
+      } else {
+        console.error("stoat client error:", error);
+      }
+    });
 
     const ready = new Promise<Client>((resolve, reject) => {
       const onReady = () => {
         cleanup();
         resolve(client);
-      };
-      const onError = (error: unknown) => {
-        cleanup();
-        reject(
-          error instanceof Error
-            ? error
-            : new Error(`stoat connection failed: ${JSON.stringify(error)}`),
-        );
       };
       const timer =
         Number.isFinite(this.timeoutMs) && this.timeoutMs > 0
@@ -70,22 +77,22 @@ export class StoatRepository {
             }, this.timeoutMs)
           : undefined;
 
+      failConnect = (error) => {
+        cleanup();
+        reject(error);
+      };
       cleanup = () => {
         clearTimeout(timer);
         client.off("ready", onReady);
-        client.off("error", onError);
+        failConnect = undefined;
       };
 
       client.once("ready", onReady);
-      client.once("error", onError);
     });
 
     try {
       await client.loginBot(this.token);
       this.client = await ready;
-      client.on("error", (error) => {
-        console.error("stoat client error:", error);
-      });
       return this.client;
     } catch (error) {
       cleanup();
