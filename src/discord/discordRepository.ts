@@ -105,6 +105,7 @@ export class DiscordRepository {
     } catch (error) {
       cleanup();
       ready.catch(() => {}); // a later timeout/error must not go unhandled
+      await client.destroy();
       throw error;
     }
   }

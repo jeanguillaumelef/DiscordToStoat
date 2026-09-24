@@ -60,6 +60,12 @@ function fakeClient(
   const listeners = new Map<string, Set<Listener>>();
   const fake = {
     loginBotCalls: [] as string[],
+    disconnectCalls: 0,
+    events: {
+      disconnect() {
+        fake.disconnectCalls++;
+      },
+    },
     servers: {
       get: (id: string) => servers[id],
     },
@@ -127,6 +133,37 @@ test("connect() rejects when the client never becomes ready", async () => {
   });
 
   await assert.rejects(repo.connect(), /timed out after 10ms/);
+});
+
+test("connect() disconnects the client when it fails", async () => {
+  const timedOut = fakeClient();
+  const loginFailed = fakeClient(() => {
+    throw new Error("bad token");
+  });
+  const clients = [timedOut, loginFailed];
+  const repo = new StoatRepository({
+    token: "bot-token",
+    timeoutMs: 10,
+    createClient: () => clients.shift() as unknown as Client,
+  });
+
+  await assert.rejects(repo.connect(), /timed out/);
+  await assert.rejects(repo.connect(), /bad token/);
+
+  assert.equal(timedOut.disconnectCalls, 1);
+  assert.equal(loginFailed.disconnectCalls, 1);
+});
+
+test("connect() does not disconnect the client on success", async () => {
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("ready")));
+  const repo = new StoatRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+
+  await repo.connect();
+
+  assert.equal(client.disconnectCalls, 0);
 });
 
 test("connect() propagates a loginBot() failure", async () => {

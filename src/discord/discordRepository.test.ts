@@ -40,6 +40,10 @@ function fakeClient(
   const listeners = new Map<string, Set<Listener>>();
   const fake = {
     loginCalls: [] as string[],
+    destroyCalls: 0,
+    async destroy() {
+      fake.destroyCalls++;
+    },
     guilds: {
       cache: {
         get: (id: string) => guilds[id],
@@ -107,6 +111,37 @@ test("connect() rejects when the client never becomes ready", async () => {
   });
 
   await assert.rejects(repo.connect(), /timed out after 10ms/);
+});
+
+test("connect() destroys the client when it fails", async () => {
+  const timedOut = fakeClient();
+  const loginFailed = fakeClient(() => {
+    throw new Error("bad token");
+  });
+  const clients = [timedOut, loginFailed];
+  const repo = new DiscordRepository({
+    token: "bot-token",
+    timeoutMs: 10,
+    createClient: () => clients.shift() as unknown as Client,
+  });
+
+  await assert.rejects(repo.connect(), /timed out/);
+  await assert.rejects(repo.connect(), /bad token/);
+
+  assert.equal(timedOut.destroyCalls, 1);
+  assert.equal(loginFailed.destroyCalls, 1);
+});
+
+test("connect() does not destroy the client on success", async () => {
+  const client = fakeClient((c) => queueMicrotask(() => c.emit("clientReady")));
+  const repo = new DiscordRepository({
+    token: "bot-token",
+    createClient: () => client as unknown as Client,
+  });
+
+  await repo.connect();
+
+  assert.equal(client.destroyCalls, 0);
 });
 
 test("connect() propagates a login() failure", async () => {

@@ -97,6 +97,7 @@ export class StoatRepository {
     } catch (error) {
       cleanup();
       ready.catch(() => {}); // a later timeout/error must not go unhandled
+      client.events.disconnect();
       throw error;
     }
   }
