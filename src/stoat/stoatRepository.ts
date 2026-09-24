@@ -83,6 +83,9 @@ export class StoatRepository {
     try {
       await client.loginBot(this.token);
       this.client = await ready;
+      client.on("error", (error) => {
+        console.error("stoat client error:", error);
+      });
       return this.client;
     } catch (error) {
       cleanup();

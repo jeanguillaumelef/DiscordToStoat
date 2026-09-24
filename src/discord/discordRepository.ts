@@ -91,6 +91,9 @@ export class DiscordRepository {
     try {
       await client.login(this.token);
       this.client = await ready;
+      client.on("error", (error) => {
+        console.error("discord client error:", error);
+      });
       return this.client;
     } catch (error) {
       cleanup();

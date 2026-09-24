@@ -45,6 +45,10 @@ function fakeClient(
         get: (id: string) => guilds[id],
       },
     },
+    on(event: string, cb: Listener) {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(cb);
+    },
     once(event: string, cb: Listener) {
       const wrapped: Listener = (...args) => {
         fake.off(event, wrapped);
