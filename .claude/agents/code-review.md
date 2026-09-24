@@ -40,6 +40,7 @@ Do NOT run any other git commands beyond what is specified.
 - Test coverage and testability
 - Documentation and comments
 - Security considerations (secrets, input validation)
+- TypeScript idioms: code that reads like JavaScript with type annotations (see "TypeScript Idioms")
 
 **REVIEW CATEGORIES:**
 
@@ -69,5 +70,8 @@ Do NOT run any other git commands beyond what is specified.
 - Unnecessary database queries or API calls
 - Missing caching where appropriate
 - Resource-intensive operations in tight loops
+
+**TypeScript Idioms:**
+Flag code that reads like JavaScript with type annotations added (loose types, casts to silence the compiler, ad-hoc object shapes, unused TypeScript features) and show the idiomatic TypeScript alternative. Only flag it when a clearly better alternative exists.
 
 Begin analysis by examining the git context and then proceed with comprehensive code review.
