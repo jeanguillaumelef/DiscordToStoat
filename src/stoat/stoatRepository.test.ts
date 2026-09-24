@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { Client } from "stoat.js";
+import { SendMessageError } from "../domain/stoatRepositoryPort.js";
 import {
   StoatRepository,
   type StoatRepositoryConfig,
@@ -308,7 +309,7 @@ test("sendMessage() throws for an unknown server", async () => {
   );
 });
 
-test("sendMessage() throws for an unknown channel", async () => {
+test("sendMessage() returns channel_not_found for an unknown channel", async () => {
   const client = fakeClient(
     (c) => queueMicrotask(() => c.emit("ready")),
     { "server-1": { channels: [] } },
@@ -319,10 +320,9 @@ test("sendMessage() throws for an unknown channel", async () => {
   });
   await repo.connect();
 
-  await assert.rejects(
-    repo.sendMessage("server-1", "unknown", "hello"),
-    /unknown stoat channel/,
-  );
+  const result = await repo.sendMessage("server-1", "unknown", "hello");
+
+  assert.deepEqual(result, { ok: false, error: SendMessageError.ChannelNotFound });
 });
 
 test("sendMessage() throws when not connected", async () => {

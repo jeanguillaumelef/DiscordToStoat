@@ -1,17 +1,7 @@
 import type { Channel } from "./channel.js";
 import type { Message } from "./message.js";
-import type { User } from "./user.js";
-
-export interface StoatRepositoryPort {
-  listChannels(serverId: string): Channel[];
-  createChannel(serverId: string, name: string): Promise<Channel>;
-  sendMessage(
-    serverId: string,
-    channelName: string,
-    content: string,
-    user?: User,
-  ): Promise<unknown>;
-}
+import type { Result } from "./result.js";
+import { SendMessageError, type StoatRepositoryPort } from "./stoatRepositoryPort.js";
 
 /**
  * Migrate a channel from Discord to Stoat.
@@ -22,12 +12,22 @@ export class ChannelMigrator {
     private readonly stoatServerId: string,
   ) {}
 
-  async migrateMessage(channel: Channel, message: Message): Promise<void> {
-    await this.stoat.sendMessage(
-      this.stoatServerId,
-      channel.name,
-      message.content,
-      message.author,
-    );
+  async migrateMessage(
+    channel: Channel,
+    message: Message,
+  ): Promise<Result<void, SendMessageError>> {
+    const send = () =>
+      this.stoat.sendMessage(
+        this.stoatServerId,
+        channel.name,
+        message.content,
+        message.author,
+      );
+
+    const result = await send();
+    if (result.ok || result.error !== SendMessageError.ChannelNotFound) return result;
+
+    await this.stoat.createChannel(this.stoatServerId, channel.name);
+    return send();
   }
 }

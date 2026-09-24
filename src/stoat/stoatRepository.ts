@@ -1,6 +1,11 @@
-import { Client, Message } from "stoat.js";
+import { Client } from "stoat.js";
 
 import type { Channel } from "../domain/channel.js";
+import {
+  SendMessageError,
+  type StoatRepositoryPort,
+} from "../domain/stoatRepositoryPort.js";
+import type { Result } from "../domain/result.js";
 import type { User } from "../domain/user.js";
 
 /** Default time to wait for the `ready` event before giving up. */
@@ -25,7 +30,7 @@ export interface StoatRepositoryConfig {
 }
 
 /** Manages all interactions with a Stoat server: connecting, sending, etc. */
-export class StoatRepository {
+export class StoatRepository implements StoatRepositoryPort {
   private readonly token: string;
   private readonly timeoutMs: number;
   private readonly makeClient: () => Client;
@@ -137,25 +142,27 @@ export class StoatRepository {
   /**
    * Send a message to the channel with the given name on a server,
    * optionally masquerading as the given user (e.g. the Discord user being
-   * bridged) via their display name and avatar.
+   * bridged) via their display name and avatar. Returns a
+   * `channel_not_found` error if the server has no channel with that name.
    */
   async sendMessage(
     serverId: string,
     channelName: string,
     content: string,
     user?: User,
-  ): Promise<Message> {
+  ): Promise<Result<void, SendMessageError>> {
     if (!this.client) throw new Error("stoat repository is not connected");
 
     const server = this.client.servers.get(serverId);
     if (!server) throw new Error(`unknown stoat server: ${serverId}`);
 
     const channel = server.channels.find((c) => c.name === channelName);
-    if (!channel) throw new Error(`unknown stoat channel: ${channelName}`);
+    if (!channel) return { ok: false, error: SendMessageError.ChannelNotFound };
 
-    return channel.sendMessage({
+    await channel.sendMessage({
       content,
       masquerade: user && { name: user.displayName, avatar: user.avatarUrl },
     });
+    return { ok: true, value: undefined };
   }
 }
